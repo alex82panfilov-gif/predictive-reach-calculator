@@ -9,8 +9,10 @@ import ResultsSection from './components/ResultsSection';
 import LoadingSpinner from './components/LoadingSpinner';
 import Methodology from './components/Methodology';
 import DataSettings from './components/DataSettings';
+import Login from './components/Login';
 
 const App: React.FC = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState('calculator');
     const [targetAudience, setTargetAudience] = useState<string>('All 18-44');
     const [city, setCity] = useState<string>('РФ');
@@ -38,6 +40,10 @@ const App: React.FC = () => {
             setIsLoading(false);
         }
     }, [mediaPlan, targetAudience, city, dataFile]);
+
+    if (!isAuthenticated) {
+        return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+    }
 
     const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => {
         const isActive = activeTab === tabName;
