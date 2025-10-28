@@ -26,11 +26,22 @@ export interface IncrementalStep {
     reach: number;
     cumulative_reach: number;
     increment: number;
+    exclusivity: number;
 }
 
 export interface KFactor {
     pair: string;
     value: number;
+}
+
+export interface DuplicationMatrix {
+    headers: string[];
+    rows: (string | number)[][];
+}
+
+export interface ExclusionResult {
+    name: string;
+    loss: number;
 }
 
 export interface CalculationResult {
@@ -42,9 +53,10 @@ export interface CalculationResult {
     sourceAudiences: string[];
     incrementalData: IncrementalStep[];
     kFactors: KFactor[];
+    duplicationMatrix: DuplicationMatrix;
+    exclusionAnalysis: ExclusionResult[];
 }
 
-// FIX: Define and export the SavedScenario type to resolve the import error. This type encapsulates all the data needed to save and restore a scenario, including inputs and results.
 export interface SavedScenario {
     id: number;
     name: string;

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { CalculationResult, MediaPlanItem } from '../types';
 import DataTable from './DataTable';
@@ -9,10 +10,14 @@ const COLORS = ['#00A9FF', '#33B9FF', '#66C9FF', '#99D9FF', '#CCE9FF', '#008ECC'
 interface ResultsSectionProps {
     results: CalculationResult;
     mediaPlan: MediaPlanItem[];
+    onSaveScenario: (name: string, resultsToSave: CalculationResult, mediaPlanToSave: MediaPlanItem[]) => void;
 }
 
-const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) => {
+const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan, onSaveScenario }) => {
     
+    const [isSaving, setIsSaving] = useState(false);
+    const [scenarioName, setScenarioName] = useState(`Сценарий от ${new Date().toLocaleDateString()}`);
+
     const formattedIncrementalData = results.incrementalData.map(d => ({
         ...d,
         increment_pct: d.increment * 100,
@@ -37,7 +42,15 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) =
         `${(s.reach * 100).toFixed(1)}%`,
         `${(s.cumulative_reach * 100).toFixed(1)}%`,
         `+${(s.increment * 100).toFixed(1)}%`,
+        `${(s.exclusivity * 100).toFixed(1)}%`,
     ]);
+
+    const exclusionTableRows = [...results.exclusionAnalysis]
+        .sort((a, b) => b.loss - a.loss)
+        .map(item => [
+            item.name,
+            `-${(item.loss * 100).toFixed(1)}%`,
+        ]);
 
      const kFactorsTableRows = results.kFactors.map(k => [k.pair, k.value.toFixed(2)]);
 
@@ -69,12 +82,13 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) =
             ...mediaPlan.filter(item => item.reach > 0).map(item => [item.name, item.reach]),
             [],
             ["ИНКРЕМЕНТАЛЬНЫЙ ОХВАТ"],
-            ["Медиаканал", "Индивид. охват", "Накопл. охват", "Прирост охвата"],
+            ["Медиаканал", "Индивид. охват", "Накопл. охват", "Прирост", "Эксклюзивность"],
             ...incrementalData.map(s => [
                 s.name,
                 { v: s.reach, t: 'n', z: '0.0%' },
                 { v: s.cumulative_reach, t: 'n', z: '0.0%' },
-                { v: s.increment, t: 'n', z: '0.0%' }
+                { v: s.increment, t: 'n', z: '0.0%' },
+                { v: s.exclusivity, t: 'n', z: '0.0%' }
             ]),
             []
         ];
@@ -88,17 +102,20 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) =
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(dataToExport);
 
-        // Устанавливаем ширину колонок
         ws['!cols'] = [
-            { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+            { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
         ];
         
-        // Объединяем ячейку заголовка
         if (!ws['!merges']) ws['!merges'] = [];
-        ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+        ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } });
 
         XLSX.utils.book_append_sheet(wb, ws, "Отчет по охвату");
         XLSX.writeFile(wb, "reach_report.xlsx");
+    };
+
+    const handleSaveClick = () => {
+        onSaveScenario(scenarioName, results, mediaPlan);
+        setIsSaving(false);
     };
     
     return (
@@ -116,12 +133,36 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) =
                 </div>
             </div>
 
-            <button
-                onClick={handleExport}
-                className="w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-300"
-            >
-                📄 Скачать отчет (.xlsx)
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {!isSaving ? (
+                    <button
+                        onClick={() => setIsSaving(true)}
+                        className="w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-300"
+                    >
+                        💾 Сохранить сценарий
+                    </button>
+                ) : (
+                    <div className="sm:col-span-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={scenarioName}
+                            onChange={(e) => setScenarioName(e.target.value)}
+                            placeholder="Название сценария"
+                            className="w-full bg-white border-gray-300 border rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                        <button onClick={handleSaveClick} className="bg-blue-600 text-white hover:bg-blue-500 font-semibold py-2 px-3 rounded-lg text-sm transition">Сохранить</button>
+                        <button onClick={() => setIsSaving(false)} className="bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold py-2 px-3 rounded-lg text-sm transition">Отмена</button>
+                    </div>
+                )}
+                
+                <button
+                    onClick={handleExport}
+                    className={`w-full flex justify-center items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-300 ${isSaving ? 'sm:col-span-2' : ''}`}
+                >
+                    📄 Скачать отчет (.xlsx)
+                </button>
+            </div>
+
 
             <div className="space-y-4 pt-2">
                 <CollapsibleSection title="Источник данных для прогноза" defaultOpen={true}>
@@ -169,14 +210,39 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({ results, mediaPlan }) =
                     </div>
                 </CollapsibleSection>
 
-                <CollapsibleSection title="Таблица: Накопленный охват по шагам" defaultOpen={false}>
-                    <DataTable headers={["Медиаканал", "Индивид. охват", "Накопл. охват", "Прирост"]} rows={incrementalTableRows} />
+                <CollapsibleSection title="Таблица: Накопленный и эксклюзивный охват" defaultOpen={false}>
+                     <p className="text-sm text-gray-600 mb-4">
+                        <b>Эксклюзивность</b> показывает, какой процент от собственного охвата канала составил его уникальный вклад в общий охват.
+                    </p>
+                    <DataTable title="" headers={["Медиаканал", "Индивид. охват", "Накопл. охват", "Прирост", "Эксклюзивность"]} rows={incrementalTableRows} />
+                </CollapsibleSection>
+                
+                 <CollapsibleSection title="🧬 Анализ дублирования (Матрица пересечений)" defaultOpen={false}>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Таблица показывает, какая доля аудитории канала в <b>строке</b> уже охвачена каналом в <b>столбце</b>. Помогает выявить "каннибализацию" каналов.
+                    </p>
+                    <DataTable
+                        title=""
+                        headers={results.duplicationMatrix.headers}
+                        rows={results.duplicationMatrix.rows}
+                    />
+                </CollapsibleSection>
+
+                <CollapsibleSection title="⚠️ Анализ потерь при исключении (Критичность)" defaultOpen={false}>
+                     <p className="text-sm text-gray-600 mb-4">
+                        Таблица показывает, на сколько процентных пунктов упадет совокупный охват, если полностью убрать канал из медиаплана.
+                    </p>
+                    <DataTable
+                        title=""
+                        headers={["Исключенный канал", "Потеря охвата (п.п.)"]}
+                        rows={exclusionTableRows}
+                    />
                 </CollapsibleSection>
                 
                  {kFactorsTableRows.length > 0 && (
                     <CollapsibleSection title="Спрогнозированные K-коэффициенты" defaultOpen={false}>
                          <p className="text-sm text-gray-600 mb-4">Эти коэффициенты были рассчитаны для вашей целевой аудитории и использовались для определения пересечения каналов.</p>
-                         <DataTable headers={["Пара каналов", "K-фактор"]} rows={kFactorsTableRows} />
+                         <DataTable title="" headers={["Пара каналов", "K-фактор"]} rows={kFactorsTableRows} />
                     </CollapsibleSection>
                  )}
             </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { SavedScenario } from '../types';
 
@@ -66,7 +67,7 @@ const ScenariosComparison: React.FC<ScenariosComparisonProps> = ({ scenarios, se
                                 <td className="px-4 py-4 font-medium">{scenario.name}</td>
                                 <td className="px-4 py-4 text-center font-bold text-lg text-cyan-700">{(scenario.results.finalReach * 100).toFixed(1)}%</td>
                                 <td className={`px-4 py-4 text-center font-bold ${confidenceColor[scenario.results.confidence]}`}>{confidenceText[scenario.results.confidence]}</td>
-                                <td className="px-4 py-4">{scenario.results.header.split(' для ЦА: ')[1]}</td>
+                                <td className="px-4 py-4">{scenario.targetAudience} ({scenario.city})</td>
                                 <td className="px-4 py-4">
                                     <div className="flex items-center justify-center gap-2">
                                         <button 

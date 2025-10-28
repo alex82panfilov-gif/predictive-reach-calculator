@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface DataTableProps {
@@ -19,11 +20,15 @@ const DataTable: React.FC<DataTableProps> = ({ headers, rows, title }) => (
                 <tbody>
                     {rows.map((row, rowIndex) => (
                         <tr key={rowIndex} className="border-t border-gray-200">
-                            {row.map((cell, cellIndex) => (
-                                <td key={cellIndex} className={`px-4 py-3 ${typeof cell === 'string' && cell.includes('%') ? 'font-mono' : ''}`}>
-                                    {cell}
-                                </td>
-                            ))}
+                            {row.map((cell, cellIndex) => {
+                                const isHeaderCell = cellIndex === 0 && typeof cell === 'string' && cell.startsWith('**');
+                                const cellContent = isHeaderCell ? cell.replace(/\*\*/g, '') : cell;
+                                return (
+                                    <td key={cellIndex} className={`px-4 py-3 ${typeof cell === 'string' && cell.includes('%') ? 'font-mono' : ''} ${isHeaderCell ? 'font-bold' : ''}`}>
+                                        {cellContent}
+                                    </td>
+                                );
+                            })}
                         </tr>
                     ))}
                 </tbody>

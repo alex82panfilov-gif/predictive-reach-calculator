@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
-import type { MediaPlanItem, CalculationResult } from './types';
+import type { MediaPlanItem, CalculationResult, SavedScenario } from './types';
 import { INITIAL_MEDIA_PLAN } from './constants';
 import { mainReachCalculator } from './services/calculatorService';
 import Header from './components/Header';
@@ -10,6 +11,8 @@ import LoadingSpinner from './components/LoadingSpinner';
 import Methodology from './components/Methodology';
 import DataSettings from './components/DataSettings';
 import Login from './components/Login';
+import ScenariosComparison from './components/ScenariosComparison';
+import VersionHistory from './components/VersionHistory';
 
 const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -18,6 +21,7 @@ const App: React.FC = () => {
     const [city, setCity] = useState<string>('РФ');
     const [mediaPlan, setMediaPlan] = useState<MediaPlanItem[]>(INITIAL_MEDIA_PLAN);
     const [dataFile, setDataFile] = useState<File | null>(null);
+    const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
 
     const [results, setResults] = useState<CalculationResult | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -40,6 +44,30 @@ const App: React.FC = () => {
             setIsLoading(false);
         }
     }, [mediaPlan, targetAudience, city, dataFile]);
+
+    const handleSaveScenario = useCallback((name: string, resultsToSave: CalculationResult, mediaPlanToSave: MediaPlanItem[]) => {
+        if (name && name.trim() !== '') {
+            const newScenario: SavedScenario = {
+                id: Date.now(),
+                name,
+                results: resultsToSave,
+                mediaPlan: mediaPlanToSave,
+                targetAudience,
+                city,
+            };
+            setSavedScenarios(prev => [...prev, newScenario]);
+            alert(`Сценарий "${name}" сохранен!`);
+            setActiveTab('scenarios');
+        }
+    }, [targetAudience, city]);
+
+    const handleLoadScenario = (scenario: SavedScenario) => {
+        setTargetAudience(scenario.targetAudience);
+        setCity(scenario.city);
+        setMediaPlan(scenario.mediaPlan);
+        setResults(scenario.results);
+        setActiveTab('calculator');
+    };
 
     if (!isAuthenticated) {
         return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
@@ -68,10 +96,12 @@ const App: React.FC = () => {
                 <Header />
 
                 <div className="mt-8 mb-8">
-                    <nav className="p-1.5 grid grid-cols-3 sm:flex sm:space-x-2 bg-gray-200/80 rounded-xl" aria-label="Tabs">
+                    <nav className="p-1.5 grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-gray-200/80 rounded-xl" aria-label="Tabs">
                         <TabButton tabName="calculator" label="Калькулятор" />
+                        <TabButton tabName="scenarios" label="Сценарии" />
                         <TabButton tabName="data" label="Данные" />
                         <TabButton tabName="methodology" label="Методика" />
+                        <TabButton tabName="versions" label="История версий" />
                     </nav>
                 </div>
 
@@ -144,11 +174,19 @@ const App: React.FC = () => {
                                                 <p>Заполните данные и нажмите 'Рассчитать'.</p>
                                             </div>
                                         )}
-                                        {results && <ResultsSection results={results} mediaPlan={mediaPlan} />}
+                                        {results && <ResultsSection results={results} mediaPlan={mediaPlan} onSaveScenario={handleSaveScenario} />}
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    )}
+                    
+                    {activeTab === 'scenarios' && (
+                        <ScenariosComparison 
+                            scenarios={savedScenarios} 
+                            setScenarios={setSavedScenarios}
+                            onLoadScenario={handleLoadScenario}
+                        />
                     )}
 
                     {activeTab === 'data' && (
@@ -160,6 +198,10 @@ const App: React.FC = () => {
 
                     {activeTab === 'methodology' && (
                         <Methodology />
+                    )}
+
+                    {activeTab === 'versions' && (
+                        <VersionHistory />
                     )}
                 </main>
             </div>
