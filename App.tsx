@@ -204,6 +204,9 @@ const App: React.FC = () => {
                         <VersionHistory />
                     )}
                 </main>
+      {/* КОМПОНЕНТЫ АНАЛИТИКИ VERCEL */}
+      <Analytics />
+      <SpeedInsights />
             </div>
         </div>
     );
